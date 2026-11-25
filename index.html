@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>寶箱開箱動畫</title>
+<style>
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+body {
+  margin: 0; min-height: 100vh; background: #0b0c11; color: #e9ebf2; line-height: 1.6;
+  font-family: "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", system-ui, sans-serif;
+}
+main {
+  display: flex; gap: 28px; justify-content: center; align-items: flex-start; flex-wrap: wrap; padding-block: 20px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+#stage {
+  position: relative; width: min(100%, calc(min(100vh - 40px, 860px) * 9 / 16)); aspect-ratio: 9 / 16;
+  border-radius: 20px; overflow: hidden; background: #000; cursor: pointer; user-select: none;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .6);
+}
+#loading, #hint, #result { position: absolute; left: 0; right: 0; text-align: center; pointer-events: none; z-index: 2; }
+#loading { top: 50%; transform: translateY(-50%); color: #9aa0b4; }
+#hint {
+  bottom: 7%; font-size: 18px; font-weight: 700; letter-spacing: .1em;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, .8); animation: pulse 1.4s ease-in-out infinite;
+}
+@keyframes pulse { 50% { opacity: .45; transform: translateY(-4px); } }
+#result {
+  bottom: 5%; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  animation: rise .45s cubic-bezier(.2, 1.4, .4, 1);
+}
+#result[hidden], #hint[hidden], #loading[hidden] { display: none; }
+@keyframes rise { from { opacity: 0; transform: translateY(24px) scale(.9); } }
+#result-rarity {
+  font: 800 15px Arial, sans-serif; letter-spacing: .12em; padding: 3px 16px; border-radius: 999px;
+  background: var(--c); color: #14151a; box-shadow: 0 0 24px var(--c);
+}
+#result-name { font-size: 22px; text-shadow: 0 2px 14px rgba(0, 0, 0, .9); }
+#again {
+  pointer-events: auto; margin-top: 6px; font: inherit; font-weight: 700; cursor: pointer;
+  padding: 8px 26px; border-radius: 999px; border: 2px solid #fff; background: rgba(0, 0, 0, .45); color: #fff;
+}
+#again:hover { background: #fff; color: #14151a; }
+
+aside { width: 380px; max-width: 100%; min-width: 0; }
+h1 { font-size: 24px; margin: 6px 0 8px; }
+h2 { font-size: 14px; color: #9aa0b4; font-weight: 700; margin: 22px 0 8px; letter-spacing: .06em; }
+.lead { color: #b9bdcc; font-size: 14px; margin: 0; }
+.note { color: #7d8398; font-size: 12.5px; margin: 8px 0 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chips button {
+  font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; padding: 7px 15px; border-radius: 999px;
+  border: 2px solid var(--c, #5d6279); background: transparent; color: var(--c, #c9cde0);
+}
+.chips button[aria-pressed="true"] { background: var(--c, #c9cde0); color: #14151a; }
+.chips button:disabled { opacity: .4; cursor: default; }
+.row { display: flex; align-items: center; gap: 18px; margin-top: 24px; }
+.primary {
+  font: inherit; font-size: 17px; font-weight: 800; cursor: pointer; padding: 12px 44px; border: 0; border-radius: 14px;
+  color: #201400; background: linear-gradient(180deg, #ffe07a, #ffb11f); box-shadow: 0 6px 0 #b86f00;
+}
+.primary:active { transform: translateY(4px); box-shadow: 0 2px 0 #b86f00; }
+.primary:disabled { filter: grayscale(.8); opacity: .6; cursor: default; }
+.toggle { font-size: 14px; color: #b9bdcc; cursor: pointer; }
+pre { background: #15171f; border: 1px solid #262936; border-radius: 12px; padding: 12px 14px; overflow-x: auto; font-size: 12.5px; line-height: 1.55; margin: 0; }
+code { font-family: Consolas, "SF Mono", monospace; }
+</style>
+</head>
+<body>
+<main>
+  <div id="stage">
+    <div id="loading">載入中…</div>
+    <div id="hint" hidden>點擊寶箱開啟</div>
+    <div id="result" hidden>
+      <span id="result-rarity"></span>
+      <strong id="result-name"></strong>
+      <button id="again" type="button">再抽一次</button>
+    </div>
+  </div>
+
+  <aside>
+    <h1>開箱動畫 Demo</h1>
+    <p class="lead">點擊寶箱或按「開箱」。寶箱會先自己震動、騰空旋轉，落地後炸開，商品從光柱中升起；外框的微光顏色代表稀有度。</p>
+
+    <h2>寶箱款式</h2>
+    <div class="chips" id="chests"></div>
+
+    <h2>這一抽的稀有度</h2>
+    <div class="chips" id="rarities"></div>
+    <p class="note">「隨機」依示範機率抽：N 50%、R 28%、SR 14%、SSR 6%、UR 2%。</p>
+
+    <div class="row">
+      <button id="open" type="button" class="primary">開箱</button>
+      <label class="toggle"><input type="checkbox" id="sound" checked> 音效</label>
+    </div>
+
+    <pre id="selftest" hidden></pre>
+  </aside>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>
